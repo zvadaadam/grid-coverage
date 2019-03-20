@@ -1,0 +1,3 @@
+/Users/adam.zvada/Documents/School/coverage/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/adam.zvada/Documents/School/coverage/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/adam.zvada/Documents/School/coverage/cmake-build-debug/CMakeFiles/coverage.dir
