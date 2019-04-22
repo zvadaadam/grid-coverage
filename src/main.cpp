@@ -2,15 +2,24 @@
 #include <fstream>
 #include <vector>
 #include <stack>
+#include <omp.h>
+#include <chrono>
 
 #define BLOCKED -1
+
+#define EMPTY 0
+
 #define TYPE_1 1
 #define TYPE_2 2
 
 #define HORIZONTAL 3
 #define VERTICAL 4
 
+#define THRESHOLD 10
+
 using namespace std;
+
+typedef std::chrono::high_resolution_clock Clock;
 
 //______________________________________________________________
 
@@ -69,8 +78,6 @@ public:
     int getI2Cost() { return i2Cost; }
     int getPenalization() { return penalization; }
 
-    int upperBoundPrice() { return this->upperBoundPrice; }
-
     vector<Point> &getForbiddenPoints() { return this->forbiddenPoints; }
 
     friend istream & operator >> (istream &in,  CoverageProblem &c);
@@ -84,8 +91,6 @@ private:
     int i2Length;
     int i2Cost;
     int penalization;
-
-    int upperBoundPrice;
 
     vector<Point> forbiddenPoints;
 
@@ -132,12 +137,12 @@ ostream & operator << (ostream &out, const CoverageProblem &c) {
     return out;
 }
 
-int CoverageProblem::calculateUpperBoundPrice() {
-
-    int numCells = m * n - forbiddenPoints.size();
-
-    return numCells * i2
-};
+//int CoverageProblem::calculateUpperBoundPrice() {
+//
+//    int numCells = m * n - forbiddenPoints.size();
+//
+//    return numCells * i2Cost
+//};
 
 //______________________________________________________________
 
@@ -184,7 +189,10 @@ public:
     vector<Block*> generatePossibleBlocks(Point * cord);
 
     int getCost() { return this->cost; }
+    int getCostWithoutPenalty(Point * cord);
     int getGridValue(int i, int j) { return this->grid[i][j]; }
+    int upperBoundCost(Point * cord);
+    int lowerBoundCost();
 
     friend ostream & operator << (ostream &out, const Grid &g);
 private:
@@ -247,6 +255,33 @@ Grid::~Grid() {
     delete[] grid;
 }
 
+int Grid::getCostWithoutPenalty(Point * cord) {
+
+    int unsolvedSquares = 0;
+    if (cord != NULL) {
+        int x = cord->getX();
+        int y = cord->getY();
+
+        for (int i = x; i < rows; i++) {
+            if (this->grid[i][y] == 0) {
+                unsolvedSquares++;
+            }
+        }
+
+        for (int i = 0; i < rows; ++i) {
+            for (int j = y + 1; j < columns; ++j) {
+                if (this->grid[i][j] == 0) {
+                    unsolvedSquares++;
+                }
+            }
+        }
+    } else {
+        unsolvedSquares = 0;
+    }
+
+    return getCost() - problem->getPenalization()*unsolvedSquares;
+}
+
 bool Grid::addBlockIfPossible(Block * block) {
 
     int x = block->getCord()->getX();
@@ -254,8 +289,13 @@ bool Grid::addBlockIfPossible(Block * block) {
 
     int blockSize = this->getBlockSize(block->getType());
 
-    if (blockSize == 0 || x >= this->rows || y >= this->columns || y < 0 || x < 0) {
+    // blockSize == 0
+    if (x >= this->rows || y >= this->columns || y < 0 || x < 0) {
         return false;
+    }
+
+    if (block->getOrientation() == EMPTY) {
+        return true;
     }
 
     if (block->getOrientation() == HORIZONTAL) {
@@ -341,6 +381,9 @@ vector<Block*> Grid::generatePossibleBlocks(Point * cord) {
             delete newBlock;
         }
     }
+
+    Block * emptyBlock = new Block(new Point(*cord), EMPTY, EMPTY, 0);
+    possibleBlocks.push_back(emptyBlock);
 
     return possibleBlocks;
 }
@@ -446,7 +489,9 @@ bool Grid::horizontalBlock(Block * block, int length) {
         this->grid[x][y + i] = id;
     }
 
+
     this->updateCost(type, length, true);
+
 
     return true;
 }
@@ -474,6 +519,7 @@ bool Grid::verticalBlock(Block * block, int length) {
     }
 
     this->updateCost(type, length, true);
+
 
     return true;
 }
@@ -509,7 +555,9 @@ bool Grid::undoBlock(Block * block) {
         if (this->grid[x][y] != block->getId()) {
             throw 42; // TODO: Beter exception
         }
+
         this->grid[x][y] = 0;
+
         if (orientation == VERTICAL) {
             x++;
         } else {
@@ -524,6 +572,68 @@ bool Grid::undoBlock(Block * block) {
     return true;
 }
 
+int Grid::lowerBoundCost() {
+    return problem->getPenalization() * (rows * columns - problem->getForbiddenPoints().size());
+}
+
+int Grid::upperBoundCost(Point * cord) {
+
+    // vraci maximalni cenu pro "number" nevyresenych policek
+    // returns the maximal price for the "number" of unsolved squares
+
+    int unsolvedSquares = 0;
+    if (cord != NULL) {
+        int x = cord->getX();
+        int y = cord->getY();
+
+        for (int i = x; i < rows; i++) {
+            if (this->grid[i][y] == 0) {
+                unsolvedSquares++;
+            }
+        }
+
+        for (int i = 0; i < rows; ++i) {
+            for (int j = y + 1; j < columns; ++j) {
+                if (this->grid[i][j] == 0) {
+                    unsolvedSquares++;
+                }
+            }
+        }
+    }
+
+    int i1Cost = problem->getI1Cost();
+    int i2Cost = problem->getI2Cost();
+
+    int i1Size = problem->getI1Length();
+    int i2Size = problem->getI2Length();
+
+    int penalty = problem->getPenalization();
+
+    int max = i2Cost * (unsolvedSquares/i2Size);
+    int reminder = unsolvedSquares % i2Size;
+
+    max += i1Cost * (reminder/i1Size);
+    reminder = reminder % i1Size;
+    max += reminder * penalty;
+
+    int val = 0;
+    for (int i = 0; i < (unsolvedSquares/i2Size); i++) {
+
+        val = i2Cost * i;
+
+        reminder = unsolvedSquares - (i * i2Size);
+        val += i2Cost * (reminder/i2Size);
+
+        reminder = reminder % i1Size;
+        val += reminder * penalty;
+
+        if (val > max) {
+            max = val;
+        }
+    }
+
+    return max;
+}
 
 //______________________________________________________________
 
@@ -550,7 +660,18 @@ Grid * Solver::solve() {
     this->solutionGrid = new Grid(grid, problem);
 
     // TODO: memory leak Point
-    this->dfsRecursive(grid, new Point(0, 0), 0);
+    # pragma omp parallel
+    {
+        # pragma omp single
+        {
+            this->dfsRecursive(grid, new Point(0, 0), 0);
+        };
+    };
+
+    cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
+    cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
+    cout << "C: " << solutionGrid->getCost() << endl;
+
 
     return solutionGrid;
 }
@@ -570,43 +691,56 @@ void Solver::dfsRecursive(Grid * grid, Point * cord, int depth) {
     vector<Block*> possibleBlocks = grid->generatePossibleBlocks(cord);
     if (possibleBlocks.size() == 0) {
 
-//        cout << endl;
-//        cout << "Depth: " << depth << endl;
-//        cout << "NO generated blocks..." << endl;
-
         Point * nextCord = this->nextCord(cord, grid);
-        this->dfsRecursive(grid, nextCord, ++depth);
+
+        if (grid->upperBoundCost(nextCord) + grid->getCostWithoutPenalty(nextCord) > this->solutionGrid->getCost()) {
+            Grid * newGrid = new Grid(grid, problem);
+            # pragma omp task if (depth < THRESHOLD)
+            {
+                this->dfsRecursive(newGrid, nextCord, ++depth);
+            };
+        }
 
         delete cord;
 
         return;
     }
 
-    for (auto block : possibleBlocks) {
+    //for (auto block : possibleBlocks) {
+    //#pragma omp parallel for //default(shared)
+    for (int i = 0; i < possibleBlocks.size(); i++) {
 
-        bool isAdded = grid->addBlockIfPossible(block);
-
-//        cout << endl;
-//        cout << "Depth: " << depth << endl;
-//        cout << "Cord: [" << cord->getX() << ", " << cord->getY() << "]" << endl;
+        bool isAdded = grid->addBlockIfPossible(possibleBlocks[i]);
 
         if (isAdded) {
 
-            if (grid->getCost() > this->solutionGrid->getCost()) {
-                delete this->solutionGrid;
-
-                this->solutionGrid = new Grid(grid, this->problem);
-                cout << *grid;
-            }
+            #pragma omp critical
+            {
+                if (grid->getCost() > this->solutionGrid->getCost()) {
+                    delete this->solutionGrid;
+                    this->solutionGrid = new Grid(grid, this->problem);
+                    cout << *grid;
+                }
+            };
 
             Point *nextCord = this->nextCord(cord, grid);
-            this->dfsRecursive(grid, nextCord, ++depth);
 
-            grid->undoBlock(block);
+            if (grid->upperBoundCost(nextCord) + grid->getCostWithoutPenalty(nextCord) > this->solutionGrid->getCost()) {
+                Grid * newGrid = new Grid(grid, problem);
+                # pragma omp task if (depth < THRESHOLD)
+                {
+                    this->dfsRecursive(newGrid, nextCord, ++depth);
+                };
+            }
+
+            if (possibleBlocks[i]->getType() != EMPTY) {
+                grid->undoBlock(possibleBlocks[i]);
+            }
         }
     }
 
     delete cord;
+    delete grid;
 
     return;
 }
@@ -669,7 +803,15 @@ int main(int argc,  char **argv) {
 
     Solver * solver = new Solver(problem);
 
+    auto start = chrono::high_resolution_clock::now();
+
     cout << *solver->solve();
+
+    auto end = chrono::high_resolution_clock::now();
+
+    chrono::duration<double, std::ratio<1>> elapsed = end-start;
+
+    cout << "Program duration: " << elapsed.count() << " seconds" << std::endl;
 
     return 0;
 }

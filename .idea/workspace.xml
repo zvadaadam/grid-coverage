@@ -8,33 +8,63 @@
   <component name="CMakeSettings">
     <configurations>
       <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" />
+      <configuration PROFILE_NAME="OpenMP" CONFIG_NAME="Release" GENERATION_OPTIONS="-D CMAKE_C++_COMPILER=/usr/local/bin/g++-8" />
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ba91d75c-7fab-480b-a4f3-a69182500698" name="Default Changelist" comment="" />
+    <list default="true" id="ba91d75c-7fab-480b-a4f3-a69182500698" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeCache.txt" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeCache.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/coverage.dir/CXX.includecache" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/coverage.dir/CXX.includecache" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/coverage.dir/build.make" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/coverage.dir/build.make" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/coverage.dir/flags.make" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/coverage.dir/flags.make" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/coverage.dir/link.txt" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/coverage.dir/link.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/coverage.dir/src/main.cpp.o" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/coverage.dir/src/main.cpp.o" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/cmake-build-debug/coverage" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/coverage" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.cpp" afterDir="false" />
+    </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
+    <ignored path="$PROJECT_DIR$/cmake-build-opemmp/" />
+    <ignored path="$PROJECT_DIR$/cmake-build-openmp/" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:OpenMP" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
-          <provider selected="true" editor-type-id="text-editor" />
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="60">
+              <caret line="4" column="41" selection-start-line="4" selection-start-column="41" selection-end-line="4" selection-end-column="41" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/main.cpp">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-1781">
+              <caret line="633" selection-start-line="633" selection-end-line="633" />
+            </state>
+          </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/main.cpp">
+        <entry file="file://$PROJECT_DIR$/.gitignore">
+          <provider selected="true" editor-type-id="text-editor" />
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$USER_HOME$/Downloads/eval_poi.c">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="439">
-              <caret line="138" column="11" lean-forward="true" selection-start-line="138" selection-start-column="11" selection-end-line="138" selection-end-column="24" />
-              <folding>
-                <element signature="e#0#19#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="484">
+              <caret line="35" column="44" selection-start-line="35" selection-end-line="36" />
             </state>
           </provider>
         </entry>
@@ -60,13 +90,27 @@
       <find>125</find>
       <find>30</find>
       <find>Cost: 30</find>
+      <find>updateCost</find>
+      <find>cost</find>
+      <find>C: 30</find>
+      <find>throw</find>
+      <find>omp</find>
+      <find>cout</find>
+      <find>lowerBoundCost</find>
+      <find>getCostWithoutPenalty</find>
+      <find>Pen</find>
     </findStrings>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
+        <option value="$USER_HOME$/Downloads/eval_poi.c" />
         <option value="$PROJECT_DIR$/CMakeLists.txt" />
         <option value="$PROJECT_DIR$/src/main.cpp" />
+        <option value="$PROJECT_DIR$/.gitignore" />
       </list>
     </option>
   </component>
@@ -77,6 +121,7 @@
     <option name="width" value="1920" />
     <option name="height" value="1200" />
   </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
@@ -106,7 +151,7 @@
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
     <property name="restartRequiresConfirmation" value="false" />
-    <property name="settings.editor.selected.configurable" value="dynamic.analysis.tools.valgrind" />
+    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
@@ -126,7 +171,7 @@
     </option>
   </component>
   <component name="RunManager">
-    <configuration name="coverage" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="$USER_HOME$/Downloads/pdp_poi/poi2.txt" PASS_PARENT_ENVS_2="true" PROJECT_NAME="coverage" TARGET_NAME="coverage" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="coverage" RUN_TARGET_NAME="coverage">
+    <configuration name="coverage" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="$USER_HOME$/Downloads/pdp_poi/poi1.txt" PASS_PARENT_ENVS_2="true" PROJECT_NAME="coverage" TARGET_NAME="coverage" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="coverage" RUN_TARGET_NAME="coverage">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -146,33 +191,39 @@
       <workItem from="1552478932677" duration="10555000" />
       <workItem from="1552571096492" duration="598000" />
       <workItem from="1552601798451" duration="2835000" />
-      <workItem from="1552913364261" duration="32348000" />
+      <workItem from="1552913364261" duration="32636000" />
+      <workItem from="1553089091015" duration="4553000" />
+      <workItem from="1553442820328" duration="326000" />
+      <workItem from="1553448335255" duration="15620000" />
+      <workItem from="1554830821139" duration="3672000" />
+      <workItem from="1554912464819" duration="967000" />
+      <workItem from="1555855341471" duration="3143000" />
+      <workItem from="1555946164681" duration="7928000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="65661000" />
+    <option name="totallyTimeSpent" value="102158000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1680" y="-150" width="1920" height="1200" extended-state="0" />
-    <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.16400427" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.1544196" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.32920355" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.27699116" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.46106195" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.26106194" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.45752212" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Database Changes" order="7" />
-      <window_info anchor="bottom" id="Messages" order="8" weight="0.2823009" />
-      <window_info anchor="bottom" id="Terminal" order="9" />
+      <window_info anchor="bottom" id="Messages" order="8" weight="0.2778761" />
+      <window_info anchor="bottom" id="Terminal" order="9" weight="0.32743362" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
       <window_info anchor="bottom" id="Version Control" order="11" />
-      <window_info anchor="bottom" id="CMake" order="12" />
+      <window_info anchor="bottom" id="CMake" order="12" weight="0.32920355" />
       <window_info anchor="bottom" id="CPU Profiler" order="13" weight="0.88061225" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -183,24 +234,28 @@
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
   </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/src/main.cpp</url>
-          <line>594</line>
-          <option name="timeStamp" value="37" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/src/main.cpp</url>
-          <line>304</line>
-          <option name="timeStamp" value="38" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
-  </component>
   <component name="debuggerHistoryManager">
     <expressions id="evaluateExpression">
+      <expression>
+        <expression-string>possibleBlocks.size()</expression-string>
+        <language-id>ObjectiveC</language-id>
+        <evaluation-mode>EXPRESSION</evaluation-mode>
+      </expression>
+      <expression>
+        <expression-string>getCost() - problem-&gt;getPenalization()*unsolvedSquares</expression-string>
+        <language-id>ObjectiveC</language-id>
+        <evaluation-mode>EXPRESSION</evaluation-mode>
+      </expression>
+      <expression>
+        <expression-string>grid-&gt;upperBoundCost() + grid-&gt;getCost()</expression-string>
+        <language-id>ObjectiveC</language-id>
+        <evaluation-mode>EXPRESSION</evaluation-mode>
+      </expression>
+      <expression>
+        <expression-string>grid-&gt;upperBoundCost() + grid-&gt;getCost() &gt; this-&gt;solutionGrid-&gt;getCost()</expression-string>
+        <language-id>ObjectiveC</language-id>
+        <evaluation-mode>EXPRESSION</evaluation-mode>
+      </expression>
       <expression>
         <expression-string>grid-&gt;getGridValue(3, 8)</expression-string>
         <language-id>ObjectiveC</language-id>
@@ -226,36 +281,33 @@
         <language-id>ObjectiveC</language-id>
         <evaluation-mode>EXPRESSION</evaluation-mode>
       </expression>
-      <expression>
-        <expression-string>problem-&gt;getForbiddenPoints()</expression-string>
-        <language-id>ObjectiveC</language-id>
-        <evaluation-mode>EXPRESSION</evaluation-mode>
-      </expression>
-      <expression>
-        <expression-string>problem-&gt;getForbiddenPoints().size()</expression-string>
-        <language-id>ObjectiveC</language-id>
-        <evaluation-mode>EXPRESSION</evaluation-mode>
-      </expression>
-      <expression>
-        <expression-string>(this-&gt;rows * this-&gt;columns)</expression-string>
-        <language-id>ObjectiveC</language-id>
-        <evaluation-mode>EXPRESSION</evaluation-mode>
-      </expression>
     </expressions>
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/cmake-build-opemmp/Makefile" />
     <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
-      <provider selected="true" editor-type-id="text-editor" />
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="60">
+          <caret line="4" column="41" selection-start-line="4" selection-start-column="41" selection-end-line="4" selection-end-column="41" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Downloads/eval_poi.c">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="484">
+          <caret line="35" column="44" selection-start-line="35" selection-end-line="36" />
+        </state>
+      </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/main.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="439">
-          <caret line="138" column="11" lean-forward="true" selection-start-line="138" selection-start-column="11" selection-end-line="138" selection-end-column="24" />
-          <folding>
-            <element signature="e#0#19#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="-1781">
+          <caret line="633" selection-start-line="633" selection-end-line="633" />
         </state>
       </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.gitignore">
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
   </component>
 </project>

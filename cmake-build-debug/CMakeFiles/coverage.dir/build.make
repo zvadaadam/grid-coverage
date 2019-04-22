@@ -60,15 +60,15 @@ include CMakeFiles/coverage.dir/flags.make
 CMakeFiles/coverage.dir/src/main.cpp.o: CMakeFiles/coverage.dir/flags.make
 CMakeFiles/coverage.dir/src/main.cpp.o: ../src/main.cpp
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/Users/adam.zvada/Documents/School/coverage/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/coverage.dir/src/main.cpp.o"
-	/Library/Developer/CommandLineTools/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/coverage.dir/src/main.cpp.o -c /Users/adam.zvada/Documents/School/coverage/src/main.cpp
+	/usr/local/bin/g++-8  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/coverage.dir/src/main.cpp.o -c /Users/adam.zvada/Documents/School/coverage/src/main.cpp
 
 CMakeFiles/coverage.dir/src/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/coverage.dir/src/main.cpp.i"
-	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/adam.zvada/Documents/School/coverage/src/main.cpp > CMakeFiles/coverage.dir/src/main.cpp.i
+	/usr/local/bin/g++-8 $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/adam.zvada/Documents/School/coverage/src/main.cpp > CMakeFiles/coverage.dir/src/main.cpp.i
 
 CMakeFiles/coverage.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/coverage.dir/src/main.cpp.s"
-	/Library/Developer/CommandLineTools/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/adam.zvada/Documents/School/coverage/src/main.cpp -o CMakeFiles/coverage.dir/src/main.cpp.s
+	/usr/local/bin/g++-8 $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/adam.zvada/Documents/School/coverage/src/main.cpp -o CMakeFiles/coverage.dir/src/main.cpp.s
 
 # Object files for target coverage
 coverage_OBJECTS = \

@@ -1,0 +1,8 @@
+.idea/vcs.xml
+a.out
+cmake-build-debug/CMakeFiles/3.13.2/CompilerIdC/tmp/
+cmake-build-debug/CMakeFiles/3.13.2/CompilerIdCXX/tmp/
+cmake-build-debug/CMakeFiles/CMakeTmp/
+cmake-build-debug/CMakeFiles/FindOpenMP/
+cmake-build-debug/coverage.dSYM/
+cmake-build-openmp/
