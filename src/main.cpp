@@ -4,6 +4,7 @@
 #include <stack>
 #include <omp.h>
 #include <chrono>
+#include <queue>
 
 #define BLOCKED -1
 
@@ -647,6 +648,7 @@ private:
     CoverageProblem * problem;
     Grid * solutionGrid;
 
+    Grid * solveLoop(Grid * grid);
     void dfsRecursive(Grid * grid, Point * cord, int depth);
     //Grid * dfsIterative(Grid * grid);
 
@@ -664,6 +666,7 @@ Grid * Solver::solve() {
     {
         # pragma omp single
         {
+            //this->solveLoop(grid);
             this->dfsRecursive(grid, new Point(0, 0), 0);
         };
     };
@@ -682,6 +685,63 @@ Solver::Solver(CoverageProblem * problem) {
 }
 
 
+Grid * Solver::solveLoop(Grid * grid) {
+
+    int depth = 20;
+
+    queue<pair<Grid*, Point*>> q;
+
+    // initial position
+    Point * cord = new Point(0, 0);
+    if (grid->getGridValue(cord->getX(), cord->getY()) == BLOCKED) {
+        cord = this->nextCord(cord, grid);
+    }
+
+    Grid * curGrid = grid;
+    Point * curCord = cord;
+    while(q.size() < depth) {
+
+        if (!q.empty()) {
+            pair<Grid*, Point*> state = q.front();
+
+            curGrid = state.first;
+            curCord = this->nextCord(state.second, curGrid);
+
+            q.pop();
+        }
+
+        vector<Block*> possibleBlocks = curGrid->generatePossibleBlocks(curCord);
+        for (auto block : possibleBlocks) {
+
+            cout << *curGrid << endl;
+
+            if (curGrid->addBlockIfPossible(block)) {
+
+                Grid *newGrid = new Grid(curGrid, problem);
+                Point *newCord = new Point(0, 0);
+
+                cout << *newGrid << endl;
+
+                q.push(make_pair(newGrid, newCord));
+
+                curGrid->undoBlock(block);
+            }
+
+        }
+    }
+
+    #pragma omp parallel for //default(shared)
+    for (int i = 0; i < q.size(); i++) {
+
+        pair<Grid*, Point*> jobState = q.front();
+        q.pop();
+
+        dfsRecursive(jobState.first, jobState.second, 0);
+    }
+
+    return this->solutionGrid;
+}
+
 void Solver::dfsRecursive(Grid * grid, Point * cord, int depth) {
 
     if (cord == nullptr) {
@@ -695,10 +755,10 @@ void Solver::dfsRecursive(Grid * grid, Point * cord, int depth) {
 
         if (grid->upperBoundCost(nextCord) + grid->getCostWithoutPenalty(nextCord) > this->solutionGrid->getCost()) {
             Grid * newGrid = new Grid(grid, problem);
-            # pragma omp task if (depth < THRESHOLD)
-            {
+//            # pragma omp task if (depth < THRESHOLD)
+//            {
                 this->dfsRecursive(newGrid, nextCord, ++depth);
-            };
+//            };
         }
 
         delete cord;
@@ -727,10 +787,10 @@ void Solver::dfsRecursive(Grid * grid, Point * cord, int depth) {
 
             if (grid->upperBoundCost(nextCord) + grid->getCostWithoutPenalty(nextCord) > this->solutionGrid->getCost()) {
                 Grid * newGrid = new Grid(grid, problem);
-                # pragma omp task if (depth < THRESHOLD)
-                {
+//                # pragma omp task if (depth < THRESHOLD)
+//                {
                     this->dfsRecursive(newGrid, nextCord, ++depth);
-                };
+//                };
             }
 
             if (possibleBlocks[i]->getType() != EMPTY) {
