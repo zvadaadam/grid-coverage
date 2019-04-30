@@ -79,6 +79,7 @@ coverage_EXTERNAL_OBJECTS =
 
 coverage: CMakeFiles/coverage.dir/src/main.cpp.o
 coverage: CMakeFiles/coverage.dir/build.make
+coverage: /usr/local/Cellar/open-mpi/4.0.1/lib/libmpi.dylib
 coverage: CMakeFiles/coverage.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/Users/adam.zvada/Documents/School/coverage/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable coverage"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/coverage.dir/link.txt --verbose=$(VERBOSE)

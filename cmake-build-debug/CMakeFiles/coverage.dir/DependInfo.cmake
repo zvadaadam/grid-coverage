@@ -10,6 +10,8 @@ set(CMAKE_CXX_COMPILER_ID "AppleClang")
 
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
+  "/usr/local/Cellar/open-mpi/4.0.1/include"
+  "/usr/local/bin/mpic++"
   )
 
 # Targets to which this target links.

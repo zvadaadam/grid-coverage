@@ -6,5 +6,5 @@ CXX_FLAGS =  -std=c++11 -fopenmp -g -isysroot /Library/Developer/CommandLineTool
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = 
+CXX_INCLUDES = -I/usr/local/Cellar/open-mpi/4.0.1/include -I/usr/local/bin/mpic++ 
 
