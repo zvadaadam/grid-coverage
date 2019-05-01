@@ -770,10 +770,11 @@ Grid * Solver::solveMPI(Grid * grid, int depthThreshold) {
         int numProcesses;
         MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
 
+        cout << "numProcesses: " << numProcesses << endl;
+        cout << "Threads: " << omp_get_max_threads() << endl;
+
         // Run BFS and feed the queue with first jobs
         q.push(make_pair(grid, cord));
-
-        cout << q.size() << endl;
 
         // generate numJobs and store it in queue
         while (q.size() < numProcesses) {
@@ -785,8 +786,6 @@ Grid * Solver::solveMPI(Grid * grid, int depthThreshold) {
             auto stateJobs = this->bfs(stateJob.first, stateJob.second, depthThreshold);
             delete stateJob.first;
             delete stateJob.second;
-
-            cout << q.size() << endl;
 
             // iterate over queue and add job states to the main job queue
             while (!stateJobs.empty()) {
@@ -800,9 +799,6 @@ Grid * Solver::solveMPI(Grid * grid, int depthThreshold) {
         for (int i = 1; i < numProcesses; i++) {
             pair<Grid*, Point*> stateJob = q.front();
             q.pop();
-
-            cout << "Distribute: " << q.size() << endl;
-            cout << *stateJob.first << endl;
 
             vector<int> serializedJob = jobSerialization(stateJob.first, stateJob.second);
             delete stateJob.first;
@@ -829,9 +825,6 @@ Grid * Solver::solveMPI(Grid * grid, int depthThreshold) {
 
             if (resultJob.first->getCost() > this->solutionGrid->getCost()) {
 
-                cout << "Found better Grid." << endl;
-                cout << *resultJob.first;
-
                 delete this->solutionGrid;
                 this->solutionGrid = new Grid(resultJob.first, this->problem);
             }
@@ -840,8 +833,6 @@ Grid * Solver::solveMPI(Grid * grid, int depthThreshold) {
                 // send new job from queue
                 pair<Grid*, Point*> stateJob = q.front();
                 q.pop();
-
-                cout << "Send: " << q.size() << endl;
 
                 vector<int> serializedJob = jobSerialization(stateJob.first, stateJob.second);
                 delete stateJob.first;
@@ -875,8 +866,6 @@ Grid * Solver::solveMPI(Grid * grid, int depthThreshold) {
                 MPI_Recv(&job[0], jobSize, MPI_INT, mpiStatus.MPI_SOURCE, TAG_JOB, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 pair<Grid*, Point*> jobState = jobDeserialization(job);
 
-                cout << "Gonna calculate: " << mpiStatus.MPI_SOURCE << endl;
-                cout << *(jobState .first)<< endl;
 
                 Grid *jobResult;
                 //jobResult = dfsRecursive(jobState.first, jobState.second, 0);
@@ -890,8 +879,6 @@ Grid * Solver::solveMPI(Grid * grid, int depthThreshold) {
                 //delete jobState.second;
                 //delete jobResult;
 
-                cout << "Slave finished computation." << endl;
-                cout << *(jobState .first)<< endl;
 
                 int jobResultSize = jobResultSerialized.size();
                 MPI_Send(&jobResultSize, 1, MPI_INT, mpiStatus.MPI_SOURCE, TAG_INIT_SIZE, MPI_COMM_WORLD);
@@ -1032,8 +1019,6 @@ Grid * Solver::solveLoop(Grid * grid, int depth) {
         }
     }
 
-    cout << "Generated jobs: " <<  q.size() << endl;
-
     #pragma omp parallel for shared(q)
     for (int i = 0; i < q.size(); i++) {
         pair<Grid *, Point *> jobState;
@@ -1141,7 +1126,7 @@ Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth) {
             # pragma omp critical
             {
                 if (grid->getCost() > this->solutionGrid->getCost()) {
-                    delete this->solutionGrid;
+                    //delete this->solutionGrid;
                     this->solutionGrid = new Grid(grid, this->problem);
                 }
             };
