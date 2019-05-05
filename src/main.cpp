@@ -687,8 +687,6 @@ Grid * Solver::solveSequence() {
     cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
     cout << "C: " << solutionGrid->getCost() << endl;
 
-    delete initCord;
-
     return solutionGrid;
 }
 
@@ -1130,7 +1128,7 @@ Point * Solver::nextCord(Point * cord, Grid * grid) {
 
 int main(int argc,  char **argv) {
 
-    if(argc != 3) {
+    if(argc != 4) {
         cout << "Missing input file or solver type" << endl;
         return 1;
     }
