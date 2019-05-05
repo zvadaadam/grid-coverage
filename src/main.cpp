@@ -7,6 +7,7 @@
 #include <queue>
 #include <mpi.h>
 
+
 #define BLOCKED -1
 
 #define EMPTY 0
@@ -647,16 +648,19 @@ class Solver {
 public:
     Solver(CoverageProblem * problem);
 
-    Grid * solve();
+    Grid * solveDistributed();
+    Grid * solveSequence();
+    Grid * solveTaskParallel(int depthThreshold);
+    Grid * solveDataParallel(int depth);
 private:
     CoverageProblem * problem;
     Grid * solutionGrid;
 
     Grid * solveMPI(Grid * grid);
-    Grid * solveLoop(Grid * grid);
+    Grid * solveLoop(Grid * grid, int depth);
 
     queue<pair<Grid*, Point*>> bfs(Grid * grid, Point * cord, int depth);
-    Grid * dfsRecursive(Grid * grid, Point * cord, int depth);
+    Grid * dfsRecursive(Grid * grid, Point * cord, int depth, int depthThreshold);
 
     vector<int> jobSerialization(Grid * grid, Point * point);
     pair<Grid*, Point*> jobDeserialization(vector<int> & serializedJob);
@@ -670,26 +674,63 @@ private:
     const int TAG_FINISHED = 4;
 };
 
-Grid * Solver::solve() {
+Grid * Solver::solveSequence() {
+
+    Grid * grid = new Grid(problem);
+
+    this->solutionGrid = new Grid(grid, problem);
+    Point * initCord = new Point(0, 0);
+
+    this->dfsRecursive(grid, initCord, 0, 0);
+
+    cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
+    cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
+    cout << "C: " << solutionGrid->getCost() << endl;
+
+    delete initCord;
+
+    return solutionGrid;
+}
+
+Grid * Solver::solveTaskParallel(int depthThreshold) {
+
+    Grid * grid = new Grid(problem);
+
+    this->solutionGrid = new Grid(grid, problem);
+    Point * initCord = new Point(0, 0);
+
+    // TODO: memory leak Point
+    # pragma omp parallel
+    {
+        # pragma omp single
+        {
+            this->dfsRecursive(grid, initCord, 0, depthThreshold);
+        };
+    };
+
+    cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
+    cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
+    cout << "C: " << solutionGrid->getCost() << endl;
+
+    delete initCord;
+
+    return solutionGrid;
+}
+
+Grid * Solver::solveDataParallel(int depth) {
 
     Grid * grid = new Grid(problem);
 
     this->solutionGrid = new Grid(grid, problem);
 
-
-    MPI_Init(nullptr, nullptr);
-
-    solveMPI(grid);
-
-//    // TODO: memory leak Point
-//    # pragma omp parallel
-//    {
-//        # pragma omp single
-//        {
-//            //this->solveLoop(grid);
-//            this->dfsRecursive(grid, new Point(0, 0), 0);
-//        };
-//    };
+    // TODO: memory leak Point
+    # pragma omp parallel
+    {
+        # pragma omp single
+        {
+            this->solveLoop(grid, depth);
+        };
+    };
 
     cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
     cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
@@ -697,6 +738,22 @@ Grid * Solver::solve() {
 
     return solutionGrid;
 }
+
+Grid * Solver::solveDistributed() {
+    Grid * grid = new Grid(problem);
+
+    this->solutionGrid = new Grid(grid, problem);
+
+    MPI_Init(nullptr, nullptr);
+    this->solveMPI(grid);
+
+    cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
+    cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
+    cout << "C: " << solutionGrid->getCost() << endl;
+
+    return solutionGrid;
+}
+
 
 Solver::Solver(CoverageProblem * problem) {
     this->problem = problem;
@@ -821,7 +878,7 @@ Grid * Solver::solveMPI(Grid * grid) {
                 # pragma omp parallel
                 {
                     # pragma omp single
-                    jobResult = dfsRecursive(jobState.first, jobState.second, 0);
+                    jobResult = dfsRecursive(jobState.first, jobState.second, 0, 0);
                 }
                 vector<int> jobResultSerialized = jobSerialization(jobResult, jobState.second);
                 //delete jobState.first;
@@ -902,7 +959,7 @@ vector<int> Solver::jobSerialization(Grid * grid, Point * point) {
     }
 
     return serializedJob;
-    
+
 }
 
 pair<Grid*, Point*> Solver::jobDeserialization(vector<int> & serializedJob) {
@@ -926,9 +983,7 @@ pair<Grid*, Point*> Solver::jobDeserialization(vector<int> & serializedJob) {
 }
 
 
-Grid * Solver::solveLoop(Grid * grid) {
-
-    int depth = 10;
+Grid * Solver::solveLoop(Grid * grid, int depth) {
 
     queue<pair<Grid*, Point*>> q;
 
@@ -975,13 +1030,13 @@ Grid * Solver::solveLoop(Grid * grid) {
         pair<Grid*, Point*> jobState = q.front();
         q.pop();
 
-        dfsRecursive(jobState.first, jobState.second, 0);
+        dfsRecursive(jobState.first, jobState.second, 0, 0);
     }
 
     return this->solutionGrid;
 }
 
-Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth) {
+Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth, const int depthThreshold) {
 
     if (cord == nullptr) {
         return this->solutionGrid;
@@ -994,9 +1049,9 @@ Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth) {
 
         if (grid->upperBoundCost(nextCord) + grid->getCostWithoutPenalty(nextCord) > this->solutionGrid->getCost()) {
             Grid * newGrid = new Grid(grid, problem);
-            # pragma omp task if (depth < THRESHOLD)
+            # pragma omp task if (depth < depthThreshold)
             {
-                this->dfsRecursive(newGrid, nextCord, ++depth);
+                this->dfsRecursive(newGrid, nextCord, ++depth, depthThreshold);
             };
         }
 
@@ -1005,8 +1060,6 @@ Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth) {
         return this->solutionGrid;
     }
 
-    //for (auto block : possibleBlocks) {
-    //#pragma omp parallel for //default(shared)
     for (int i = 0; i < possibleBlocks.size(); i++) {
 
         bool isAdded = grid->addBlockIfPossible(possibleBlocks[i]);
@@ -1025,9 +1078,9 @@ Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth) {
 
             if (grid->upperBoundCost(nextCord) + grid->getCostWithoutPenalty(nextCord) > this->solutionGrid->getCost()) {
                 Grid * newGrid = new Grid(grid, problem);
-                # pragma omp task if (depth < THRESHOLD)
+                # pragma omp task if (depth < depthThreshold)
                 {
-                    this->dfsRecursive(newGrid, nextCord, ++depth);
+                    this->dfsRecursive(newGrid, nextCord, ++depth, depthThreshold);
                 };
             }
 
@@ -1077,8 +1130,8 @@ Point * Solver::nextCord(Point * cord, Grid * grid) {
 
 int main(int argc,  char **argv) {
 
-    if(argc != 2) {
-        cout << "Missing input file." << endl;
+    if(argc != 3) {
+        cout << "Missing input file or solver type" << endl;
         return 1;
     }
 
@@ -1086,29 +1139,40 @@ int main(int argc,  char **argv) {
 
     ifstream fs(argv[1], ios::in);
 
+    int solverType = strtol(argv[2], NULL, 10);
+    int depthThreshold = strtol(argv[3], NULL, 10);
+
     CoverageProblem * problem = new CoverageProblem();
     fs >> *problem;
 
     cout << *problem;
 
     //--------TEST---------
-//    Grid * grid = new Grid(&problem);
-//
-//    cout << grid->addBlockIfPossible(new Block(new Point(6,4), TYPE_1, HORIZONTAL, TYPE_1 + HORIZONTAL)) << endl;
-//
-//    cout << *grid;
+    Grid * grid = new Grid(problem);
+
+    cout << grid->addBlockIfPossible(new Block(new Point(6,4), TYPE_1, HORIZONTAL, TYPE_1 + HORIZONTAL)) << endl;
+
+    cout << *grid;
     //--------TEST---------
 
     Solver * solver = new Solver(problem);
 
     auto start = chrono::high_resolution_clock::now();
 
-    cout << *solver->solve();
+    if (solverType == 0) {
+        cout << *solver->solveSequence();
+    } else if (solverType == 1) {
+        cout << *solver->solveTaskParallel(depthThreshold);
+    } else if (solverType == 2) {
+        cout << *solver->solveDataParallel(depthThreshold);
+    } else if (solverType == 3) {
+        cout << *solver->solveDistributed();
+    } else {
+        cout << "Unsupported solver type." << endl;
+    }
 
     auto end = chrono::high_resolution_clock::now();
-
     chrono::duration<double, std::ratio<1>> elapsed = end-start;
-
     cout << "Program duration: " << elapsed.count() << " seconds" << std::endl;
 
     return 0;

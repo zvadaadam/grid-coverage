@@ -1,0 +1,5 @@
+//
+// Created by Adam Zvada on 2019-04-30.
+//
+
+#include "solver.h"
