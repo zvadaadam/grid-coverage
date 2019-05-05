@@ -152,7 +152,7 @@ ostream & operator << (ostream &out, const CoverageProblem &c) {
 class Block {
 public:
     Block(Point * cord, int type, int orientation, int id);
-    //~Block();
+    ~Block();
 
     Point * getCord() { return this->cord; };
     int getType() { return this->type; };
@@ -173,9 +173,9 @@ Block::Block(Point * cord, int type, int orientation, int id) {
     this->id = id;
 }
 
-//Block::~Block() {
-//    delete cord;
-//}
+Block::~Block() {
+    delete cord;
+}
 
 
 //______________________________________________________________
@@ -689,8 +689,11 @@ Grid * Solver::solveSequence() {
     this->dfsRecursive(grid, initCord, 0, 0);
 
     cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
-    cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
+    cout << "UBC: " << solutionGrid->upperBoundCost(initCord) << endl;
     cout << "C: " << solutionGrid->getCost() << endl;
+
+    delete grid;
+    delete initCord;
 
     return solutionGrid;
 }
@@ -1039,6 +1042,8 @@ Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth, const int dept
         return this->solutionGrid;
     }
 
+    //cout << "Num Threads: " << omp_get_num_threads() << endl;
+
     vector<Block*> possibleBlocks = grid->generatePossibleBlocks(cord);
     if (possibleBlocks.size() == 0) {
 
@@ -1050,9 +1055,9 @@ Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth, const int dept
             {
                 this->dfsRecursive(newGrid, nextCord, ++depth, depthThreshold);
             };
+            delete newGrid;
         }
-
-        delete cord;
+        delete nextCord;
 
         return this->solutionGrid;
     }
@@ -1079,16 +1084,19 @@ Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth, const int dept
                 {
                     this->dfsRecursive(newGrid, nextCord, ++depth, depthThreshold);
                 };
+                delete newGrid;
             }
+            delete nextCord;
 
             if (possibleBlocks[i]->getType() != EMPTY) {
                 grid->undoBlock(possibleBlocks[i]);
             }
         }
+
+        delete possibleBlocks[i];
     }
 
-    delete cord;
-    delete grid;
+
 
     return this->solutionGrid;
 }
@@ -1144,14 +1152,6 @@ int main(int argc,  char **argv) {
 
     cout << *problem;
 
-    //--------TEST---------
-    Grid * grid = new Grid(problem);
-
-    cout << grid->addBlockIfPossible(new Block(new Point(6,4), TYPE_1, HORIZONTAL, TYPE_1 + HORIZONTAL)) << endl;
-
-    cout << *grid;
-    //--------TEST---------
-
     Solver * solver = new Solver(problem);
 
     auto start = chrono::high_resolution_clock::now();
@@ -1172,6 +1172,9 @@ int main(int argc,  char **argv) {
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double, std::ratio<1>> elapsed = end-start;
     cout << "Program duration: " << elapsed.count() << " seconds" << std::endl;
+
+    delete problem;
+    delete solver;
 
     return 0;
 }
