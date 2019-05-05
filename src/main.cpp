@@ -167,7 +167,7 @@ private:
 
 Block::Block(Point * cord, int type, int orientation, int id) {
 
-    this->cord = cord;
+    this->cord = new Point(cord->getX(), cord->getY());
     this->type = type;
     this->orientation = orientation;
     this->id = id;
@@ -349,7 +349,7 @@ vector<Block*> Grid::generatePossibleBlocks(Point * cord) {
 
     // I1 - horizontal
     if (cord->getY() + blockSizeI1 - 1 < this->columns) {
-        Block * newBlock = new Block(new Point(*cord), TYPE_1, HORIZONTAL, 2);
+        Block * newBlock = new Block(cord, TYPE_1, HORIZONTAL, 2);
         if (this->isBlockValid(newBlock)) {
             possibleBlocks.push_back(newBlock);
         } else {
@@ -360,7 +360,7 @@ vector<Block*> Grid::generatePossibleBlocks(Point * cord) {
     // TODO: Add IDs
     // I1 - vertical
     if (cord->getX() + blockSizeI1 - 1 < this->rows) {
-        Block * newBlock = new Block(new Point(*cord), TYPE_1, VERTICAL, 1);
+        Block * newBlock = new Block(cord, TYPE_1, VERTICAL, 1);
         if (this->isBlockValid(newBlock)) {
             possibleBlocks.push_back(newBlock);
         } else {
@@ -370,7 +370,7 @@ vector<Block*> Grid::generatePossibleBlocks(Point * cord) {
 
     // I2 - vertical
     if (cord->getX() + blockSizeI2 - 1 < this->rows) {
-        Block * newBlock = new Block(new Point(*cord), TYPE_2, VERTICAL, 3);
+        Block * newBlock = new Block(cord, TYPE_2, VERTICAL, 3);
         if (this->isBlockValid(newBlock)) {
             possibleBlocks.push_back(newBlock);
         } else {
@@ -380,7 +380,7 @@ vector<Block*> Grid::generatePossibleBlocks(Point * cord) {
 
     // I2 - horizontal
     if (cord->getY() + blockSizeI2 - 1 < this->columns) {
-        Block * newBlock = new Block(new Point(*cord), TYPE_2, HORIZONTAL, 4);
+        Block * newBlock = new Block(cord, TYPE_2, HORIZONTAL, 4);
         if (this->isBlockValid(newBlock)) {
             possibleBlocks.push_back(newBlock);
         } else {
@@ -388,7 +388,7 @@ vector<Block*> Grid::generatePossibleBlocks(Point * cord) {
         }
     }
 
-    Block * emptyBlock = new Block(new Point(*cord), EMPTY, EMPTY, 0);
+    Block * emptyBlock = new Block(cord, EMPTY, EMPTY, 0);
     possibleBlocks.push_back(emptyBlock);
 
     return possibleBlocks;
@@ -573,8 +573,6 @@ bool Grid::undoBlock(Block * block) {
     // reduced the cost
     this->updateCost(block->getType(), blockSize, false);
 
-    delete block;
-
     return true;
 }
 
@@ -660,7 +658,8 @@ private:
     Grid * solveLoop(Grid * grid, int depth);
 
     queue<pair<Grid*, Point*>> bfs(Grid * grid, Point * cord, int depth);
-    Grid * dfsRecursive(Grid * grid, Point * cord, int depth, int depthThreshold);
+    Grid * dfsRecursive(Grid * grid, Point * cord, int depth);
+    Grid * dfsRecursiveTask(Grid * grid, Point * cord, int depth, const int depthThreshold);
 
     vector<int> jobSerialization(Grid * grid, Point * point);
     pair<Grid*, Point*> jobDeserialization(vector<int> & serializedJob);
@@ -686,10 +685,10 @@ Grid * Solver::solveSequence() {
     this->solutionGrid = new Grid(grid, problem);
     Point * initCord = new Point(0, 0);
 
-    this->dfsRecursive(grid, initCord, 0, 0);
+    this->dfsRecursive(grid, initCord, 0);
 
-    cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
-    cout << "UBC: " << solutionGrid->upperBoundCost(initCord) << endl;
+//    cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
+//    cout << "UBC: " << solutionGrid->upperBoundCost(initCord) << endl;
     cout << "C: " << solutionGrid->getCost() << endl;
 
     delete grid;
@@ -710,12 +709,12 @@ Grid * Solver::solveTaskParallel(int depthThreshold) {
     {
         # pragma omp single
         {
-            this->dfsRecursive(grid, initCord, 0, depthThreshold);
+            this->dfsRecursiveTask(grid, initCord, 0, depthThreshold);
         };
     };
 
-    cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
-    cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
+//    cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
+//    cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
     cout << "C: " << solutionGrid->getCost() << endl;
 
     delete initCord;
@@ -729,17 +728,10 @@ Grid * Solver::solveDataParallel(int depth) {
 
     this->solutionGrid = new Grid(grid, problem);
 
-    // TODO: memory leak Point
-    # pragma omp parallel
-    {
-        # pragma omp single
-        {
-            this->solveLoop(grid, depth);
-        };
-    };
+    this->solveLoop(grid, depth);
 
-    cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
-    cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
+//    cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
+//    cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
     cout << "C: " << solutionGrid->getCost() << endl;
 
     return solutionGrid;
@@ -988,22 +980,28 @@ Grid * Solver::solveLoop(Grid * grid, int depth) {
     queue<pair<Grid*, Point*>> q;
 
     // initial position
-    Point * cord = new Point(0, 0);
-    if (grid->getGridValue(cord->getX(), cord->getY()) == BLOCKED) {
-        cord = this->nextCord(cord, grid);
+    Point * curCord = new Point(0, 0);
+    if (grid->getGridValue(curCord->getX(), curCord->getY()) == BLOCKED) {
+        Point* nextCord = this->nextCord(curCord, grid);
+        delete curCord;
+
+        curCord = nextCord;
     }
 
     Grid * curGrid = grid;
-    Point * curCord = cord;
     while(q.size() < depth) {
 
         if (!q.empty()) {
             pair<Grid*, Point*> state = q.front();
 
+            delete curGrid;
             curGrid = state.first;
+
             curCord = this->nextCord(state.second, curGrid);
 
             q.pop();
+
+            delete state.second;
         }
 
         vector<Block*> possibleBlocks = curGrid->generatePossibleBlocks(curCord);
@@ -1012,9 +1010,7 @@ Grid * Solver::solveLoop(Grid * grid, int depth) {
             if (curGrid->addBlockIfPossible(block)) {
 
                 Grid *newGrid = new Grid(curGrid, problem);
-                Point *newCord = new Point(0, 0);
-
-                //cout << *newGrid << endl;
+                Point *newCord = this->nextCord(curCord, curGrid);
 
                 q.push(make_pair(newGrid, newCord));
 
@@ -1024,19 +1020,80 @@ Grid * Solver::solveLoop(Grid * grid, int depth) {
         }
     }
 
-    //#pragma omp parallel for //default(shared)
+    cout << "Generated jobs: " <<  q.size() << endl;
+
+    #pragma omp parallel for
     for (int i = 0; i < q.size(); i++) {
 
-        pair<Grid*, Point*> jobState = q.front();
+        pair<Grid *, Point *> jobState = q.front();
         q.pop();
 
-        dfsRecursive(jobState.first, jobState.second, 0, 0);
+
+        dfsRecursive(jobState.first, jobState.second, 0);
     }
 
     return this->solutionGrid;
 }
 
-Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth, const int depthThreshold) {
+Grid * Solver::dfsRecursiveTask(Grid * grid, Point * cord, int depth, const int depthThreshold) {
+
+    if (cord == nullptr) {
+        return this->solutionGrid;
+    }
+
+    vector<Block*> possibleBlocks = grid->generatePossibleBlocks(cord);
+    if (possibleBlocks.size() == 0) {
+
+        Point * nextCord = this->nextCord(cord, grid);
+
+        if (grid->upperBoundCost(nextCord) + grid->getCostWithoutPenalty(nextCord) > this->solutionGrid->getCost()) {
+
+            Grid * nextGrid = new Grid(grid, problem);
+
+            #pragma omp task //if (depth < depthThreshold)
+            this->dfsRecursiveTask(nextGrid, nextCord, ++depth, depthThreshold);
+        }
+        //delete nextCord;
+
+        return this->solutionGrid;
+    }
+
+    for (int i = 0; i < possibleBlocks.size(); i++) {
+
+        bool isAdded = grid->addBlockIfPossible(possibleBlocks[i]);
+
+        if (isAdded) {
+
+            # pragma omp critical
+            {
+                if (grid->getCost() > this->solutionGrid->getCost()) {
+                    delete this->solutionGrid;
+                    this->solutionGrid = new Grid(grid, this->problem);
+                }
+            };
+
+            Point *nextCord = this->nextCord(cord, grid);
+
+            if (grid->upperBoundCost(nextCord) + grid->getCostWithoutPenalty(nextCord) > this->solutionGrid->getCost()) {
+                Grid * nextGrid = new Grid(grid, problem);
+
+                # pragma omp task //if (depth < depthThreshold)
+                this->dfsRecursiveTask(nextGrid, nextCord, ++depth, depthThreshold);
+            }
+            //delete nextCord;
+
+            if (possibleBlocks[i]->getType() != EMPTY) {
+                grid->undoBlock(possibleBlocks[i]);
+            }
+        }
+
+        //delete possibleBlocks[i];
+    }
+
+    return this->solutionGrid;
+}
+
+Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth) {
 
     if (cord == nullptr) {
         return this->solutionGrid;
@@ -1051,10 +1108,8 @@ Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth, const int dept
 
         if (grid->upperBoundCost(nextCord) + grid->getCostWithoutPenalty(nextCord) > this->solutionGrid->getCost()) {
             Grid * newGrid = new Grid(grid, problem);
-            # pragma omp task if (depth < depthThreshold)
-            {
-                this->dfsRecursive(newGrid, nextCord, ++depth, depthThreshold);
-            };
+            this->dfsRecursive(newGrid, nextCord, ++depth);
+
             delete newGrid;
         }
         delete nextCord;
@@ -1068,22 +1123,17 @@ Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth, const int dept
 
         if (isAdded) {
 
-            #pragma omp critical
-            {
-                if (grid->getCost() > this->solutionGrid->getCost()) {
-                    delete this->solutionGrid;
-                    this->solutionGrid = new Grid(grid, this->problem);
-                }
-            };
+            if (grid->getCost() > this->solutionGrid->getCost()) {
+                delete this->solutionGrid;
+                this->solutionGrid = new Grid(grid, this->problem);
+            }
 
             Point *nextCord = this->nextCord(cord, grid);
 
             if (grid->upperBoundCost(nextCord) + grid->getCostWithoutPenalty(nextCord) > this->solutionGrid->getCost()) {
                 Grid * newGrid = new Grid(grid, problem);
-                # pragma omp task if (depth < depthThreshold)
-                {
-                    this->dfsRecursive(newGrid, nextCord, ++depth, depthThreshold);
-                };
+                this->dfsRecursive(newGrid, nextCord, ++depth);
+
                 delete newGrid;
             }
             delete nextCord;
@@ -1092,14 +1142,13 @@ Grid * Solver::dfsRecursive(Grid * grid, Point * cord, int depth, const int dept
                 grid->undoBlock(possibleBlocks[i]);
             }
         }
-
         delete possibleBlocks[i];
     }
 
-
-
     return this->solutionGrid;
 }
+
+
 
 Point * Solver::nextCord(Point * cord, Grid * grid) {
 
@@ -1150,19 +1199,23 @@ int main(int argc,  char **argv) {
     CoverageProblem * problem = new CoverageProblem();
     fs >> *problem;
 
-    cout << *problem;
+    //cout << *problem;
 
     Solver * solver = new Solver(problem);
 
     auto start = chrono::high_resolution_clock::now();
 
     if (solverType == 0) {
+        cout << "Sequence" << endl;
         cout << *solver->solveSequence();
     } else if (solverType == 1) {
+        cout << "Task Parallel" << endl;
         cout << *solver->solveTaskParallel(depthThreshold);
     } else if (solverType == 2) {
+        cout << "Data Parallel" << endl;
         cout << *solver->solveDataParallel(depthThreshold);
     } else if (solverType == 3) {
+        cout << "Distributed" << endl;
         //cout << *solver->solveDistributed();
         cout << "NONE";
     } else {
