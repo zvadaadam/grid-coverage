@@ -5,7 +5,7 @@
 #include <omp.h>
 #include <chrono>
 #include <queue>
-#include <mpi.h>
+//#include <mpi.h>
 
 
 #define BLOCKED -1
@@ -656,7 +656,7 @@ private:
     CoverageProblem * problem;
     Grid * solutionGrid;
 
-    Grid * solveMPI(Grid * grid);
+//    Grid * solveMPI(Grid * grid);
     Grid * solveLoop(Grid * grid, int depth);
 
     queue<pair<Grid*, Point*>> bfs(Grid * grid, Point * cord, int depth);
@@ -673,6 +673,11 @@ private:
     const int TAG_DONE = 3;
     const int TAG_FINISHED = 4;
 };
+
+Solver::Solver(CoverageProblem * problem) {
+    this->problem = problem;
+    this->solutionGrid = nullptr;
+}
 
 Grid * Solver::solveSequence() {
 
@@ -737,167 +742,161 @@ Grid * Solver::solveDataParallel(int depth) {
     return solutionGrid;
 }
 
-Grid * Solver::solveDistributed() {
-    Grid * grid = new Grid(problem);
+//Grid * Solver::solveDistributed() {
+//    Grid * grid = new Grid(problem);
+//
+//    this->solutionGrid = new Grid(grid, problem);
+//
+//    MPI_Init(nullptr, nullptr);
+//    this->solveMPI(grid);
+//
+//    cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
+//    cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
+//    cout << "C: " << solutionGrid->getCost() << endl;
+//
+//    return solutionGrid;
+//}
 
-    this->solutionGrid = new Grid(grid, problem);
-
-    MPI_Init(nullptr, nullptr);
-    this->solveMPI(grid);
-
-    cout << "LBC: " << solutionGrid->lowerBoundCost() << endl;
-    cout << "UBC: " << solutionGrid->upperBoundCost(new Point(0, 0)) << endl;
-    cout << "C: " << solutionGrid->getCost() << endl;
-
-    return solutionGrid;
-}
-
-
-Solver::Solver(CoverageProblem * problem) {
-    this->problem = problem;
-    this->solutionGrid = nullptr;
-}
-
-Grid * Solver::solveMPI(Grid * grid) {
-
-    // initial position
-    Point * cord = new Point(0, 0);
-    if (grid->getGridValue(cord->getX(), cord->getY()) == BLOCKED) {
-        cord = this->nextCord(cord, grid);
-    }
-
-    queue<pair<Grid*, Point*>> q;
-
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    if (rank == 0) {
-
-        int numProcesses;
-        MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
-
-        // Run BFS and feed the queue with first jobs
-        q.push(make_pair(grid, cord));
-
-        // generate numJobs and store it in queue
-        while (q.size() < numProcesses) {
-
-            auto stateJob = q.front();
-            q.pop();
-
-            // generate state jobs, it stores is in queue
-            auto stateJobs = this->bfs(stateJob.first, stateJob.second, 1);
-            delete stateJob.first;
-            delete stateJob.second;
-
-            // iterate over queue and add job states to the main job queue
-            while (!stateJobs.empty()) {
-                q.push(stateJobs.front());
-
-                stateJobs.pop();
-            }
-        }
-
-        // distribute jobs to all slaves
-        for (int i = 1; i < numProcesses; i++) {
-            pair<Grid*, Point*> stateJob = q.front();
-            q.pop();
-
-            vector<int> serializedJob = jobSerialization(stateJob.first, stateJob.second);
-            delete stateJob.first;
-            delete stateJob.second;
-
-            // send index init workers?
-            int jobSize = serializedJob.size();
-            MPI_Send(&jobSize, 1, MPI_INT, i, TAG_INIT_SIZE, MPI_COMM_WORLD); // TAG_INIT - 0
-
-            MPI_Send(serializedJob.data(), serializedJob.size(), MPI_INT, i, TAG_JOB, MPI_COMM_WORLD); // TAG_WORK - 1
-        }
-
-        MPI_Status mpiStatus;
-        int workingSlaves = numProcesses - 1;
-        while (workingSlaves > 0) {
-
-            int jobResultSize;
-            MPI_Recv(&jobResultSize, 1, MPI_INT, MPI_ANY_SOURCE, TAG_INIT_SIZE, MPI_COMM_WORLD, &mpiStatus);
-
-            vector<int> jobResult;
-            jobResult.resize(jobResultSize);
-            MPI_Recv(&jobResult[0], jobResultSize, MPI_INT, mpiStatus.MPI_SOURCE, TAG_DONE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            pair<Grid*, Point*> resultJob = jobDeserialization(jobResult);
-
-            if (resultJob.first->getCost() > this->solutionGrid->getCost()) {
-
-                cout << "Found better Grid." << endl;
-                cout << *resultJob.first;
-
-                delete this->solutionGrid;
-                this->solutionGrid = new Grid(resultJob.first, this->problem);
-            }
-
-            if (!q.empty()) {
-                // send new job from queue
-                pair<Grid*, Point*> stateJob = q.front();
-                q.pop();
-
-                vector<int> serializedJob = jobSerialization(stateJob.first, stateJob.second);
-                delete stateJob.first;
-                delete stateJob.second;
-
-                int jobSize = serializedJob.size();
-                MPI_Send(&jobSize , 1, MPI_INT, mpiStatus.MPI_SOURCE, TAG_INIT_SIZE, MPI_COMM_WORLD); // TAG_INIT - 0
-
-                MPI_Send(serializedJob.data(), serializedJob.size(), MPI_INT, mpiStatus.MPI_SOURCE, TAG_JOB, MPI_COMM_WORLD); // TAG_WORK - 1
-            } else {
-                // Inform about finish
-                MPI_Send(&workingSlaves, 1, MPI_INT, mpiStatus.MPI_SOURCE, TAG_FINISHED, MPI_COMM_WORLD);
-                workingSlaves--;
-            }
-        }
-
-    } else {
-
-        bool endIndicator = false;
-        MPI_Status mpiStatus;
-
-        while (!endIndicator) {
-
-            int jobSize;
-            MPI_Recv(&jobSize, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpiStatus);
-
-            if (mpiStatus.MPI_TAG != TAG_FINISHED) {
-                // MPI_SOURCE should be MASTER!
-                vector<int> job;
-                job.resize(jobSize);
-                MPI_Recv(&job[0], jobSize, MPI_INT, mpiStatus.MPI_SOURCE, TAG_JOB, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                pair<Grid*, Point*> jobState = jobDeserialization(job);
-
-                Grid *jobResult;
-                # pragma omp parallel
-                {
-                    # pragma omp single
-                    jobResult = dfsRecursive(jobState.first, jobState.second, 0, 0);
-                }
-                vector<int> jobResultSerialized = jobSerialization(jobResult, jobState.second);
-                //delete jobState.first;
-                //delete jobState.second;
-                //delete jobResult;
-
-                cout << "Slave finished computation." << endl;
-
-                int jobResultSize = jobResultSerialized.size();
-                MPI_Send(&jobResultSize, 1, MPI_INT, mpiStatus.MPI_SOURCE, TAG_INIT_SIZE, MPI_COMM_WORLD);
-                MPI_Send(jobResultSerialized.data(), jobResultSize, MPI_INT, mpiStatus.MPI_SOURCE, TAG_DONE, MPI_COMM_WORLD);
-            } else {
-                endIndicator = true;
-            }
-        }
-    }
-
-    MPI_Finalize();
-
-    return this->solutionGrid;
-}
+//Grid * Solver::solveMPI(Grid * grid) {
+//
+//    // initial position
+//    Point * cord = new Point(0, 0);
+//    if (grid->getGridValue(cord->getX(), cord->getY()) == BLOCKED) {
+//        cord = this->nextCord(cord, grid);
+//    }
+//
+//    queue<pair<Grid*, Point*>> q;
+//
+//    int rank;
+//    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+//
+//    if (rank == 0) {
+//
+//        int numProcesses;
+//        MPI_Comm_size(MPI_COMM_WORLD, &numProcesses);
+//
+//        // Run BFS and feed the queue with first jobs
+//        q.push(make_pair(grid, cord));
+//
+//        // generate numJobs and store it in queue
+//        while (q.size() < numProcesses) {
+//
+//            auto stateJob = q.front();
+//            q.pop();
+//
+//            // generate state jobs, it stores is in queue
+//            auto stateJobs = this->bfs(stateJob.first, stateJob.second, 1);
+//            delete stateJob.first;
+//            delete stateJob.second;
+//
+//            // iterate over queue and add job states to the main job queue
+//            while (!stateJobs.empty()) {
+//                q.push(stateJobs.front());
+//
+//                stateJobs.pop();
+//            }
+//        }
+//
+//        // distribute jobs to all slaves
+//        for (int i = 1; i < numProcesses; i++) {
+//            pair<Grid*, Point*> stateJob = q.front();
+//            q.pop();
+//
+//            vector<int> serializedJob = jobSerialization(stateJob.first, stateJob.second);
+//            delete stateJob.first;
+//            delete stateJob.second;
+//
+//            // send index init workers?
+//            int jobSize = serializedJob.size();
+//            MPI_Send(&jobSize, 1, MPI_INT, i, TAG_INIT_SIZE, MPI_COMM_WORLD); // TAG_INIT - 0
+//
+//            MPI_Send(serializedJob.data(), serializedJob.size(), MPI_INT, i, TAG_JOB, MPI_COMM_WORLD); // TAG_WORK - 1
+//        }
+//
+//        MPI_Status mpiStatus;
+//        int workingSlaves = numProcesses - 1;
+//        while (workingSlaves > 0) {
+//
+//            int jobResultSize;
+//            MPI_Recv(&jobResultSize, 1, MPI_INT, MPI_ANY_SOURCE, TAG_INIT_SIZE, MPI_COMM_WORLD, &mpiStatus);
+//
+//            vector<int> jobResult;
+//            jobResult.resize(jobResultSize);
+//            MPI_Recv(&jobResult[0], jobResultSize, MPI_INT, mpiStatus.MPI_SOURCE, TAG_DONE, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+//            pair<Grid*, Point*> resultJob = jobDeserialization(jobResult);
+//
+//            if (resultJob.first->getCost() > this->solutionGrid->getCost()) {
+//
+//                cout << "Found better Grid." << endl;
+//                cout << *resultJob.first;
+//
+//                delete this->solutionGrid;
+//                this->solutionGrid = new Grid(resultJob.first, this->problem);
+//            }
+//
+//            if (!q.empty()) {
+//                // send new job from queue
+//                pair<Grid*, Point*> stateJob = q.front();
+//                q.pop();
+//
+//                vector<int> serializedJob = jobSerialization(stateJob.first, stateJob.second);
+//                delete stateJob.first;
+//                delete stateJob.second;
+//
+//                int jobSize = serializedJob.size();
+//                MPI_Send(&jobSize , 1, MPI_INT, mpiStatus.MPI_SOURCE, TAG_INIT_SIZE, MPI_COMM_WORLD); // TAG_INIT - 0
+//
+//                MPI_Send(serializedJob.data(), serializedJob.size(), MPI_INT, mpiStatus.MPI_SOURCE, TAG_JOB, MPI_COMM_WORLD); // TAG_WORK - 1
+//            } else {
+//                // Inform about finish
+//                MPI_Send(&workingSlaves, 1, MPI_INT, mpiStatus.MPI_SOURCE, TAG_FINISHED, MPI_COMM_WORLD);
+//                workingSlaves--;
+//            }
+//        }
+//
+//    } else {
+//
+//        bool endIndicator = false;
+//        MPI_Status mpiStatus;
+//
+//        while (!endIndicator) {
+//
+//            int jobSize;
+//            MPI_Recv(&jobSize, 1, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &mpiStatus);
+//
+//            if (mpiStatus.MPI_TAG != TAG_FINISHED) {
+//                // MPI_SOURCE should be MASTER!
+//                vector<int> job;
+//                job.resize(jobSize);
+//                MPI_Recv(&job[0], jobSize, MPI_INT, mpiStatus.MPI_SOURCE, TAG_JOB, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+//                pair<Grid*, Point*> jobState = jobDeserialization(job);
+//
+//                Grid *jobResult;
+//                # pragma omp parallel
+//                {
+//                    # pragma omp single
+//                    jobResult = dfsRecursive(jobState.first, jobState.second, 0, 0);
+//                }
+//                vector<int> jobResultSerialized = jobSerialization(jobResult, jobState.second);
+//                //delete jobState.first;
+//                //delete jobState.second;
+//                //delete jobResult;
+//
+//                cout << "Slave finished computation." << endl;
+//
+//                int jobResultSize = jobResultSerialized.size();
+//                MPI_Send(&jobResultSize, 1, MPI_INT, mpiStatus.MPI_SOURCE, TAG_INIT_SIZE, MPI_COMM_WORLD);
+//                MPI_Send(jobResultSerialized.data(), jobResultSize, MPI_INT, mpiStatus.MPI_SOURCE, TAG_DONE, MPI_COMM_WORLD);
+//            } else {
+//                endIndicator = true;
+//            }
+//        }
+//    }
+//
+//    MPI_Finalize();
+//
+//    return this->solutionGrid;
+//}
 
 queue<pair<Grid*, Point*>> Solver::bfs(Grid * grid, Point * cord, int depth) {
 
@@ -1012,7 +1011,7 @@ Grid * Solver::solveLoop(Grid * grid, int depth) {
                 Grid *newGrid = new Grid(curGrid, problem);
                 Point *newCord = new Point(0, 0);
 
-                cout << *newGrid << endl;
+                //cout << *newGrid << endl;
 
                 q.push(make_pair(newGrid, newCord));
 
@@ -1164,7 +1163,8 @@ int main(int argc,  char **argv) {
     } else if (solverType == 2) {
         cout << *solver->solveDataParallel(depthThreshold);
     } else if (solverType == 3) {
-        cout << *solver->solveDistributed();
+        //cout << *solver->solveDistributed();
+        cout << "NONE";
     } else {
         cout << "Unsupported solver type." << endl;
     }
